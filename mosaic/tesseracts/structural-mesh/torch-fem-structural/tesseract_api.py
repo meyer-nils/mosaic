@@ -220,7 +220,9 @@ def _compliance(
     # n_points / n_faces entries.
     points = np.asarray(hm["points"], dtype=np.float64)[:n_nodes]
     cells = np.asarray(hm["faces"], dtype=np.int64)[:n_cells]
-    rho_np = np.asarray(inputs["rho"], dtype=np.float64)[:n_cells]
+    # Clip before rho becomes an autograd leaf; torch.clamp would zero the
+    # gradient at rho = 0 and rho = 1.
+    rho_np = np.clip(np.asarray(inputs["rho"], dtype=np.float64)[:n_cells], 0, 1)
 
     E_max = float(inputs.get("E_max", 70_000.0))
     nu = float(inputs.get("nu", 0.3))
@@ -238,8 +240,7 @@ def _compliance(
     model = Solid(nodes, elements, material)
     model.material = material.vectorize(model.n_elem)
 
-    # Clamp is gradient-transparent inside [0, 1], where the harness keeps rho.
-    simp = xmin + (1.0 - xmin) * torch.clamp(rho, 0.0, 1.0) ** p_exp
+    simp = xmin + (1.0 - xmin) * rho**p_exp
     model.material.C = simp[:, None, None, None, None] * model.material.C
 
     constraints, displacements, forces = _build_bcs(

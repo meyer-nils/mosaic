@@ -273,9 +273,7 @@ def _forward_torchfem(
 
     # SIMP scaling: k = k_min + (k_max - k_min) * rho^p
     #             = k_max · (k_min_ratio + (1 - k_min_ratio) · rho^p)
-    # Clip rho into [0, 1] for numerical safety but keep gradient.
-    rho_clip = torch.clamp(rho_t, 0.0, 1.0)
-    simp_scale = _K_MIN_RATIO + (1.0 - _K_MIN_RATIO) * rho_clip**p_exp  # (n_cells,)
+    simp_scale = _K_MIN_RATIO + (1.0 - _K_MIN_RATIO) * rho_t**p_exp  # (n_cells,)
     # model.material.KAPPA shape (n_cells, 3, 3); multiply elementwise along elem dim
     model.material.KAPPA = simp_scale[:, None, None] * model.material.KAPPA
 
@@ -340,7 +338,9 @@ def _apply_core(inputs_dict: dict, want_grad: bool) -> dict:
     points_np = np.asarray(hm["points"][:n_nodes], dtype=np.float64)
     cells_np = np.asarray(hm["faces"][:n_cells], dtype=np.int64)
 
-    rho_np = np.asarray(inputs_dict["rho"][:n_cells], dtype=np.float64)
+    # Clip before rho becomes an autograd leaf; torch.clamp would zero the
+    # gradient at rho = 0 and rho = 1.
+    rho_np = np.clip(np.asarray(inputs_dict["rho"][:n_cells], dtype=np.float64), 0, 1)
     source_np = np.asarray(inputs_dict["source"][:n_cells], dtype=np.float64)
     target_np = np.asarray(inputs_dict.get("target_temperature", []), dtype=np.float64)
 
