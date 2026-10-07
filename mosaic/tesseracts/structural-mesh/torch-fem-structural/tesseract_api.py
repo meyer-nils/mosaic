@@ -78,6 +78,7 @@ _DTYPE = torch.float64
 
 torch.set_default_dtype(_DTYPE)
 torch.set_default_device(_DEVICE)
+torch.use_deterministic_algorithms(True, warn_only=True)
 
 
 # ---------------------------------------------------------------------------

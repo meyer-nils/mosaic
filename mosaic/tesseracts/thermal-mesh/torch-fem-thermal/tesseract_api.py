@@ -87,6 +87,7 @@ _DTYPE = torch.float64  # torch-fem defaults to float64 for solver stability
 # tensors we construct explicitly with ``device=_DEVICE``.
 torch.set_default_dtype(_DTYPE)
 torch.set_default_device(_DEVICE)
+torch.use_deterministic_algorithms(True, warn_only=True)
 
 
 # SIMP parameters (baked into the InputSchema defaults but kept here as fallbacks)
